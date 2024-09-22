@@ -78,7 +78,7 @@ export default function RegisterForm (){
               <input
                 onChange={(e) => setEmail(e.target.value)}
                 type="text"
-                placeholder="Email"
+                placeholder="User Name"
               />
               <input
                 onChange={(e) => setPassword(e.target.value)}
@@ -100,6 +100,4 @@ export default function RegisterForm (){
           </div>
         </div>
     );
-
-    
 }
