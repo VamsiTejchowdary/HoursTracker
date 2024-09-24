@@ -192,7 +192,7 @@ export default function UserInfo() {
             onClick={() => signOut({ callbackUrl: "/" })}
             className="bg-red-500 text-white font-bold px-6 py-2 rounded-lg hover:bg-red-600 transition-all"
           >
-            Log Out
+            Log Off
           </button>
         </div>
 
