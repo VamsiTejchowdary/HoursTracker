@@ -137,6 +137,16 @@ export default function UserInfo() {
       toast.error("Failed to update month hours.");
     } 
   };
+ 
+  
+    const handleSignOut = () => {
+      signOut({
+        redirect: false,
+      }).then(() => {
+        router.push("/login");
+      });
+    };
+  
 
   return (
     <div
@@ -189,7 +199,7 @@ export default function UserInfo() {
 
         <div className="flex justify-center mt-2">
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={handleSignOut}
             className="bg-red-500 text-white font-bold px-6 py-2 rounded-lg hover:bg-red-600 transition-all"
           >
             Log Off
