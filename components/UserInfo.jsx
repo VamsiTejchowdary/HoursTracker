@@ -12,6 +12,8 @@ export default function UserInfo() {
   const [userInfo, setUserInfo] = useState(null);
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClockedIn , setIsClockedIn] = useState(false);
+  const [isClockedOut , setIsClockedOut] = useState(true);
 
   // Memoized function using useCallback to prevent unnecessary re-renders
   const handleFetchUserHours = useCallback(async (email) => {
@@ -68,7 +70,7 @@ export default function UserInfo() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
+
     setIsSubmitting(true);
 
     const hours = parseFloat(userInfo?.hours) + parseFloat(newHours);
@@ -100,7 +102,7 @@ export default function UserInfo() {
     } catch (error) {
       console.error("Error updating hours:", error);
       toast.error("Failed to add hours.");
-    } 
+    }
   };
 
   const handleMonthCompleted = async (e) => {
@@ -128,25 +130,23 @@ export default function UserInfo() {
       setHours("");
       setIsSubmitting(true);
       toast.success("Month hours Record successfully!");
-    
+
       setTimeout(() => {
         window.location.reload();
       }, 5000);
     } catch (error) {
       console.error("Error updating month hours:", error);
       toast.error("Failed to update month hours.");
-    } 
+    }
   };
- 
-  
-    const handleSignOut = () => {
-      signOut({
-        redirect: false,
-      }).then(() => {
-        router.push("/login");
-      });
-    };
-  
+
+  const handleSignOut = () => {
+    signOut({
+      redirect: false,
+    }).then(() => {
+      router.push("/login");
+    });
+  };
 
   return (
     <div
@@ -187,7 +187,20 @@ export default function UserInfo() {
             {userInfo?.lastmonthhours ?? "Loading..."}
           </span>
         </div>
-
+        <div className="flex justify-center space-x-20">
+          <button 
+          className="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition-all  disabled:bg-gray-400 disabled:cursor-not-allowed"
+          disabled={isClockedIn}
+          >
+            Clock In
+          </button>
+          <button 
+          className="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition-all  disabled:bg-gray-400 disabled:cursor-not-allowed"
+          disabled={isClockedOut}
+          >
+            Clock Out
+          </button>
+        </div>
         <div className="flex justify-center">
           <button
             onClick={handleOpenPopup}
