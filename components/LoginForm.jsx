@@ -26,6 +26,33 @@ export default function LoginForm() {
       }
 
       router.replace("dashboard");
+      const now = new Date();
+      const localDate = new Date(
+        now.getTime() - now.getTimezoneOffset() * 60000
+      );
+      const formattedDate = localDate.toISOString().slice(0, 10);
+      //console.log(formattedDate);
+      
+      const dailyRecordExist = await fetch("api/dailyHourRecordExists", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email,date:formattedDate }),
+      });
+      console.log(dailyRecordExist);
+      const { exists } = await dailyRecordExist.json();
+      //console.log(exists);
+      if(!exists){
+        
+        const res = await fetch("api/dailyhoursrecord", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email,date: formattedDate }),
+        });
+      }
     } catch (error) {
       console.log(error);
     }
