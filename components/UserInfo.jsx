@@ -12,36 +12,43 @@ export default function UserInfo() {
   const [userInfo, setUserInfo] = useState(null);
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isClockedIn , setIsClockedIn] = useState(false);
-  const [isClockedOut , setIsClockedOut] = useState(true);
+  const [isClockedIn, setIsClockedIn] = useState(null);
+  const [isClockedOut, setIsClockedOut] = useState(null);
+  const email = session?.user?.email;
+  const [userDailyHourRecord, setUserDailyHourRecord] = useState(null);
+  const now = new Date();
 
   // Memoized function using useCallback to prevent unnecessary re-renders
   const handleFetchUserHours = useCallback(async (email) => {
     try {
-      console.log("Fetching hours for:", email);
-
-      const response = await fetch(
-        `${window.location.origin}/api/trackhours?email=${encodeURIComponent(
-          email
-        )}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-
-      const data = await response.json();
-      if (data && data.trackhours) {
-        setUserInfo(data.trackhours);
+      const trackHoursData = await fetchTrackHours(email);
+      if (trackHoursData && trackHoursData.trackhours) {
+        setUserInfo(trackHoursData.trackhours);
       }
     } catch (error) {
       console.error("Error fetching user hours:", error);
+    }
+    try {
+      const now = new Date();
+      const localDate = new Date(
+        now.getTime() - now.getTimezoneOffset() * 60000
+      );
+      const formattedDate = localDate.toISOString().slice(0, 10);
+      const getDailyHourRecord = await fetchDailyHourRecord(
+        email,
+        formattedDate
+      );
+      if (getDailyHourRecord && getDailyHourRecord.dailyHourRecord) {
+        setUserDailyHourRecord(getDailyHourRecord.dailyHourRecord);
+        console.log(getDailyHourRecord.dailyHourRecord);
+        if (getDailyHourRecord.dailyHourRecord.isClockedIn) {
+          setIsClockedIn(true);
+        } else {
+          setIsClockedOut(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error updating user clockin deatils:", error);
     }
   }, []); // No dependencies, function will not change
 
@@ -68,7 +75,7 @@ export default function UserInfo() {
     setIsPopupOpen(false);
   };
 
-  const handleSubmit = async (event) => {
+  const handleHoursWorked = async (event) => {
     event.preventDefault();
 
     setIsSubmitting(true);
@@ -78,21 +85,8 @@ export default function UserInfo() {
     const lastmonthhours = parseFloat(userInfo?.lastmonthhours);
     const email = session?.user?.email;
 
-    console.log("Submitted Data:", { hours, lastmonthhours, lastentry, email });
-
     try {
-      const trackhours = await fetch("/api/trackhours", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, lastentry, hours, lastmonthhours }),
-      });
-
-      if (!trackhours.ok) {
-        throw new Error("Failed to update hours");
-      }
-
+      await updateTrackHours(email, lastentry, hours, lastmonthhours);
       setHours("");
       toast.success("Hours added successfully!");
 
@@ -100,7 +94,6 @@ export default function UserInfo() {
         window.location.reload();
       }, 5000);
     } catch (error) {
-      console.error("Error updating hours:", error);
       toast.error("Failed to add hours.");
     }
   };
@@ -112,7 +105,7 @@ export default function UserInfo() {
     const hours = parseFloat(0);
     const lastentry = userInfo?.lastentry;
     const lastmonthhours = parseFloat(userInfo?.hours);
-    const email = session?.user?.email;
+    //const email = session?.user?.email;
 
     try {
       const trackhours = await fetch("/api/trackhours", {
@@ -147,6 +140,220 @@ export default function UserInfo() {
       router.push("/login");
     });
   };
+  const handleClockIn = async (e) => {
+    const now = new Date();
+    const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    const formattedDate = localDate.toISOString().slice(0, 10);
+    const email = session?.user?.email;
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+
+    const exactTime = `${hours}:${minutes}`;
+
+    try {
+      const trackhours = await fetch("/api/dailyhoursrecord", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          date: formattedDate,
+          clockIn: exactTime,
+          isClockedIn: true,
+          isClockedOut: false,
+        }),
+      });
+
+      if (!trackhours.ok) {
+        throw new Error("Failed to clock in!");
+      }
+      const getDailyHourRecord = await fetchDailyHourRecord(
+        email,
+        formattedDate
+      );
+
+      //const data = await getDailyHourRecord.json();
+
+      setUserDailyHourRecord(getDailyHourRecord.dailyHourRecord);
+
+      setIsClockedIn(true);
+      setIsClockedOut(false);
+      toast.success("Clocked In Successfully!!!");
+    } catch (error) {
+      console.error("Error while clocking in:", error);
+      toast.error("Failed to clock in.");
+    }
+  };
+
+  const handleClockOut = async (e) => {
+    const email = session?.user?.email;
+    const { todayRecordHours, exactTime, formattedDate } =
+      await calculateTodayRecordHours(email);
+    await updateDailyHoursRecord(
+      email,
+      formattedDate,
+      exactTime,
+      todayRecordHours
+    );
+
+    setIsClockedIn(false);
+    setIsClockedOut(true);
+    toast.success("Clocked Out Successfully!!!");
+
+    const hours = parseFloat(userInfo?.hours) + parseFloat(todayRecordHours);
+    const lastentry = new Date().toISOString();
+    const lastmonthhours = parseFloat(userInfo?.lastmonthhours);
+
+    try {
+      await updateTrackHours(email, lastentry, hours, lastmonthhours);
+      setHours("");
+      toast.success("Hours added successfully!");
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 5000);
+    } catch (error) {
+      toast.error("Failed to add hours.");
+    }
+  };
+
+  function getTimeDifferenceInHours(startTime, endTime) {
+    // Convert times to Date objects
+    const [startHours, startMinutes] = startTime.split(":").map(Number);
+    const [endHours, endMinutes] = endTime.split(":").map(Number);
+
+    const start = new Date(0, 0, 0, startHours, startMinutes);
+    const end = new Date(0, 0, 0, endHours, endMinutes);
+
+    // Calculate the difference in milliseconds
+    let diff = end - start;
+
+    // Convert milliseconds to minutes and then to hours (in decimal)
+    const hoursDifference = diff / (1000 * 60 * 60);
+    return hoursDifference;
+  }
+
+  async function fetchDailyHourRecord(email, formattedDate) {
+    try {
+      const response = await fetch(
+        `${
+          window.location.origin
+        }/api/dailyhoursrecord?email=${encodeURIComponent(
+          email
+        )}&date=${encodeURIComponent(formattedDate)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching daily hour record:", error);
+      return null;
+    }
+  }
+  async function fetchTrackHours(email) {
+    try {
+      const response = await fetch(
+        `${window.location.origin}/api/trackhours?email=${encodeURIComponent(
+          email
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching user hours:", error);
+      return null;
+    }
+  }
+  async function updateTrackHours(email, lastentry, hours, lastmonthhours) {
+    try {
+      const response = await fetch("/api/trackhours", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, lastentry, hours, lastmonthhours }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update hours");
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Error updating hours:", error);
+      throw error;
+    }
+  }
+  async function calculateTodayRecordHours(email) {
+    const now = new Date();
+    const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    const formattedDate = localDate.toISOString().slice(0, 10);
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const exactTime = `${hours}:${minutes}`;
+
+    const getDailyHourRecord = await fetchDailyHourRecord(email, formattedDate);
+
+    const todayRecordHours = getTimeDifferenceInHours(
+      getDailyHourRecord.dailyHourRecord.clockIn,
+      exactTime
+    );
+
+    return { todayRecordHours, exactTime, formattedDate };
+  }
+  async function updateDailyHoursRecord(
+    email,
+    formattedDate,
+    exactTime,
+    todayRecordHours
+  ) {
+    try {
+      console.log(formattedDate, exactTime, todayRecordHours);
+      const trackhours = await fetch("/api/dailyhoursrecord", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          date: formattedDate,
+          isClockedIn: false,
+          clockOut: exactTime,
+          isClockedOut: true,
+          totalDayHours: todayRecordHours,
+        }),
+      });
+
+      if (!trackhours.ok) {
+        throw new Error("Failed to clock out!");
+      }
+    } catch (error) {
+      console.error("Error clocking out:", error);
+      throw error;
+    }
+  }
 
   return (
     <div
@@ -172,6 +379,13 @@ export default function UserInfo() {
         </div>
 
         <div className="text-lg text-gray-700">
+          Today Clocked In:{" "}
+          <span className="font-bold">
+            {userDailyHourRecord?.clockIn ?? "Clock In!!!!"}
+          </span>
+        </div>
+
+        <div className="text-lg text-gray-700">
           Total Hours:{" "}
           <span className="font-bold">{userInfo?.hours ?? "Loading..."}</span>
         </div>
@@ -188,15 +402,17 @@ export default function UserInfo() {
           </span>
         </div>
         <div className="flex justify-center space-x-20">
-          <button 
-          className="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition-all  disabled:bg-gray-400 disabled:cursor-not-allowed"
-          disabled={isClockedIn}
+          <button
+            onClick={handleClockIn}
+            className="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition-all  disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled={isClockedIn}
           >
             Clock In
           </button>
-          <button 
-          className="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition-all  disabled:bg-gray-400 disabled:cursor-not-allowed"
-          disabled={isClockedOut}
+          <button
+            onClick={handleClockOut}
+            className="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition-all  disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled={isClockedOut}
           >
             Clock Out
           </button>
@@ -229,7 +445,10 @@ export default function UserInfo() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <form
+                onSubmit={handleHoursWorked}
+                className="flex flex-col gap-4"
+              >
                 <div>
                   <label className="block text-gray-700 mb-2">
                     Hours Worked

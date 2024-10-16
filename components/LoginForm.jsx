@@ -26,8 +26,12 @@ export default function LoginForm() {
       }
 
       router.replace("dashboard");
-      const today = new Date();
-      const formattedDate = today.toISOString().slice(0, 10);
+      const now = new Date();
+      const localDate = new Date(
+        now.getTime() - now.getTimezoneOffset() * 60000
+      );
+      const formattedDate = localDate.toISOString().slice(0, 10);
+      //console.log(formattedDate);
       
       const dailyRecordExist = await fetch("api/dailyHourRecordExists", {
         method: "POST",
@@ -38,7 +42,7 @@ export default function LoginForm() {
       });
       console.log(dailyRecordExist);
       const { exists } = await dailyRecordExist.json();
-      console.log(exists);
+      //console.log(exists);
       if(!exists){
         
         const res = await fetch("api/dailyhoursrecord", {
