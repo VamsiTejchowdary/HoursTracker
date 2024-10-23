@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { ClockIcon, LogoutIcon } from "@heroicons/react/solid";
+import Image from "next/image";
 
 export default function UserInfo() {
   const { data: session, status } = useSession();
@@ -40,7 +42,7 @@ export default function UserInfo() {
       );
       if (getDailyHourRecord && getDailyHourRecord.dailyHourRecord) {
         setUserDailyHourRecord(getDailyHourRecord.dailyHourRecord);
-        console.log(getDailyHourRecord.dailyHourRecord);
+        //console.log(getDailyHourRecord.dailyHourRecord);
         if (getDailyHourRecord.dailyHourRecord.isClockedIn) {
           setIsClockedIn(true);
         } else {
@@ -356,91 +358,104 @@ export default function UserInfo() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-fixed bg-cover"
-      style={{
-        backgroundImage: "url('https://source.unsplash.com/featured/?nature')",
-      }} // Optionally use a high-quality background image
-    >
-      <div>
-        <ToastContainer />
-      </div>
-      <div className="container mx-auto max-w-md shadow-lg p-8 bg-white/80 backdrop-blur-lg rounded-lg flex flex-col gap-6 my-6">
-        <h2 className="text-3xl font-bold text-gray-800 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600 bg-fixed bg-cover">
+      <ToastContainer
+        className="fixed top-4 right-4 z-50" // Position the ToastContainer
+      >
+        {/* Optionally, customize toast styles inside this container */}
+      </ToastContainer>
+
+      <div className="container mx-auto max-w-lg shadow-xl p-10 bg-gradient-to-br from-blue-100 to-purple-200 rounded-lg flex flex-col gap-8 my-8 backdrop-blur-lg">
+        <h2 className="text-4xl font-bold text-gray-800 text-center">
           User Information
         </h2>
 
-        <div className="text-lg text-gray-700">
-          Hi <span className="font-bold">{session?.user?.name},</span>
+        <div className="flex items-center justify-center gap-4">
+          <div className="text-lg text-gray-800">
+            Hi <span className="font-bold">{session?.user?.name}</span>,
+          </div>
         </div>
 
-        <div className="text-lg text-gray-700">
-          Email: <span className="font-bold">{session?.user?.email}</span>
+        <div className="text-lg text-gray-800">
+          User Name: <span className="font-bold">{session?.user?.email}</span>
         </div>
 
-        <div className="text-lg text-gray-700">
+        <div className="text-lg text-gray-800">
           Today Clocked In:{" "}
           <span className="font-bold">
             {userDailyHourRecord?.clockIn ?? "Clock In!!!!"}
           </span>
         </div>
 
-        <div className="text-lg text-gray-700">
+        <div className="text-lg text-gray-800">
           Total Hours:{" "}
           <span className="font-bold">{userInfo?.hours ?? "Loading..."}</span>
         </div>
 
-        <div className="text-lg text-gray-700">
+        <div className="text-lg text-gray-800">
           Last Entry Date:{" "}
           <span className="font-bold">{formatDate(userInfo?.lastentry)}</span>
         </div>
 
-        <div className="text-lg text-gray-700">
+        <div className="text-lg text-gray-800">
           Last Month Hours:{" "}
           <span className="font-bold">
             {userInfo?.lastmonthhours ?? "Loading..."}
           </span>
         </div>
-        <div className="flex justify-center space-x-20">
-          <button
-            onClick={handleClockIn}
-            className="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition-all  disabled:bg-gray-400 disabled:cursor-not-allowed"
-            disabled={isClockedIn}
-          >
-            Clock In
-          </button>
-          <button
-            onClick={handleClockOut}
-            className="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition-all  disabled:bg-gray-400 disabled:cursor-not-allowed"
-            disabled={isClockedOut}
-          >
-            Clock Out
-          </button>
+
+        <div className="flex justify-center space-x-4 mt-4">
+          {/* Conditionally render Clock In button */}
+          {!isClockedIn && (
+            <button
+              onClick={handleClockIn}
+              className={`bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-3 rounded-lg transition-all duration-200 ease-in-out shadow-lg transform hover:scale-105`}
+            >
+              Clock In
+            </button>
+          )}
+
+          {/* Conditionally render Clock Out button */}
+          {isClockedIn && (
+            <button
+              onClick={handleClockOut}
+              className={`${
+                isClockedOut
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-red-500 hover:bg-red-600"
+              } text-white font-bold px-6 py-3 rounded-lg transition-all duration-200 ease-in-out shadow-lg transform hover:scale-105 disabled:opacity-50`}
+              disabled={isClockedOut}
+            >
+              Clock Out
+            </button>
+          )}
         </div>
-        <div className="flex justify-center">
+
+        <div className="flex justify-center space-x-4">
           <button
             onClick={handleOpenPopup}
             className="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition-all"
           >
             Enter Hours
           </button>
-        </div>
 
-        <div className="flex justify-center mt-2">
           <button
             onClick={handleSignOut}
-            className="bg-red-500 text-white font-bold px-6 py-2 rounded-lg hover:bg-red-600 transition-all"
+            className="bg-red-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-red-700 transition-all"
           >
             Log Off
           </button>
         </div>
 
         {isPopupOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
             <div className="bg-white p-6 rounded-lg shadow-lg w-96">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold">Enter Hours</h3>
-                <button onClick={handleClosePopup} className="text-red-500">
+                <h3 className="text-xl font-bold">Enter Hours</h3>
+                <button
+                  onClick={handleClosePopup}
+                  className="text-red-500 text-2xl"
+                >
                   &#10005; {/* Close (X) button */}
                 </button>
               </div>
@@ -457,7 +472,7 @@ export default function UserInfo() {
                     type="number"
                     value={newHours}
                     onChange={(e) => setHours(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
+                    className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-300"
                     placeholder="Enter hours"
                     required
                   />
@@ -476,7 +491,7 @@ export default function UserInfo() {
                   <button
                     type="submit"
                     className="bg-blue-500 text-white font-bold px-4 py-2 rounded-lg hover:bg-blue-600 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    disabled={isSubmitting} // Button is disabled during submission
+                    disabled={isSubmitting}
                   >
                     Add Hours
                   </button>
